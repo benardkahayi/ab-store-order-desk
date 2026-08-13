@@ -1,0 +1,29 @@
+# XAMPP / local files
+xampp/
+mysql/
+*.log
+
+# Environment / secrets
+.env
+.env.*
+!.env.example
+
+# IDE
+.vscode/
+.idea/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# PHP temporary files
+*.tmp
+*.temp
+
+# Backups
+*.bak
+*.backup
+
+# Database dumps containing sensitive information
+# Remove this line if you intentionally want to version your SQL schema
+*.sql

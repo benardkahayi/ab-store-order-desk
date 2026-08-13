@@ -1,0 +1,51 @@
+/* Body: full page background */
+body {
+    margin: 0;
+    padding: 0;
+    display: flex;              /* centers the container */
+    justify-content: center;    /* horizontal center */
+    align-items: center;        /* vertical center */
+    min-height: 100vh;          /* full viewport height */
+    
+    /* Background image */
+    background: url("/order_desk/image/bg.jpg") no-repeat center center fixed;
+    background-size: cover;      /* cover entire screen */
+}
+
+/* Container: stays fully visible on top of background */
+    .container {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        flex-direction: column;
+    width: 400px;
+    padding: 30px;
+    
+
+    /* background: rgba(255, 255, 255, 0.3); 0.3 = 30% opacity
+    border-radius: 12px; */
+    /* box-shadow: 0 5px 15px rgba(0,0,0,0.2);  */
+    text-align:top;
+    }
+
+/* Input fields and buttons */
+input, button {
+    /* background-color: rgb(232, 226, 226); */
+    padding: 10px;
+    margin: 5px 0;
+    /* color: gray; */
+    border: none;
+    border-radius: 10px;
+    font-size: 16px;
+}
+
+/* Button hover effect */
+button:hover {
+    background-color: blue;
+    opacity: 0.8;                
+    cursor: pointer;
+    transition: 0.3s;           
+}
+h2{
+    color: aqua;
+}
