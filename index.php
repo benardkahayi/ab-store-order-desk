@@ -1,4 +1,12 @@
-<?php session_start(); ?>
+<?php
+session_start();
+require_once __DIR__ . '/db.php';
+
+$stat_customers = (int) $conn->query("SELECT COUNT(*) FROM customers")->fetchColumn();
+$stat_orders     = (int) $conn->query("SELECT COUNT(*) FROM orders")->fetchColumn();
+$stat_items      = (int) $conn->query("SELECT COALESCE(SUM(quantity),0) FROM orders")->fetchColumn();
+$stat_payments   = (int) $conn->query("SELECT COUNT(*) FROM payments WHERE status='completed'")->fetchColumn();
+?>
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -7,7 +15,7 @@
     <title>AB FASHIONSTORE — Import from China to Tanzania</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,wght@0,500;0,600;0,700;1,500&family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body { font-family: 'Inter', sans-serif; color: #1e1b4b; overflow-x: hidden; }
@@ -75,31 +83,27 @@
 
         /* ── HERO ── */
         .hero {
-            background: linear-gradient(135deg,#eef2ff 0%,#f5f3ff 40%,#ede9fe 100%);
-            padding: 72px 0 0; position: relative; overflow: hidden;
+            background: #f8f7fc;
+            padding: 68px 0 0; position: relative; overflow: hidden;
             min-height: 560px;
-        }
-        .hero::before {
-            content: ''; position: absolute; top: -60px; right: -60px;
-            width: 500px; height: 500px; border-radius: 50%;
-            background: radial-gradient(circle,rgba(109,40,217,0.08),transparent 70%);
         }
         .hero-tag {
             display: inline-flex; align-items: center; gap: 7px;
             background: white; border: 1.5px solid #c4b5fd;
             border-radius: 24px; padding: 6px 14px;
-            font-size: 13px; font-weight: 600; color: #5b21b6; margin-bottom: 22px;
+            font-size: 13px; font-weight: 600; color: #5b21b6; margin-bottom: 24px;
         }
         .hero h1 {
-            font-size: 44px; font-weight: 800; line-height: 1.12;
-            color: #1e1b4b; margin-bottom: 18px;
+            font-family: 'Fraunces', serif;
+            font-size: 46px; font-weight: 600; line-height: 1.14;
+            color: #1e1b4b; margin-bottom: 20px; letter-spacing: -0.5px;
         }
-        .hero h1 span { color: #4f46e5; }
-        .hero-sub { font-size: 15px; color: #4b5563; line-height: 1.7; margin-bottom: 22px; max-width: 480px; }
+        .hero h1 em { color: #4f46e5; font-style: italic; font-weight: 500; }
+        .hero-sub { font-size: 15.5px; color: #4b5563; line-height: 1.7; margin-bottom: 26px; max-width: 460px; }
         .hero-checks { display: flex; gap: 20px; flex-wrap: wrap; margin-bottom: 32px; }
         .hero-check { display: flex; align-items: center; gap: 7px; font-size: 13.5px; font-weight: 600; color: #374151; }
         .hero-check i { color: #4f46e5; font-size: 16px; }
-        .hero-btns { display: flex; gap: 12px; flex-wrap: wrap; margin-bottom: 36px; }
+        .hero-btns { display: flex; gap: 12px; flex-wrap: wrap; margin-bottom: 40px; }
         .btn-start {
             display: inline-flex; align-items: center; gap: 8px;
             padding: 13px 26px; background: linear-gradient(135deg,#4f46e5,#7c3aed);
@@ -114,36 +118,61 @@
             text-decoration: none; transition: border-color 0.2s;
         }
         .btn-track:hover { border-color: #4f46e5; color: #4f46e5; }
-        .social-proof { display: flex; align-items: center; gap: 12px; }
-        .avatars { display: flex; }
-        .avatars span {
-            width: 34px; height: 34px; border-radius: 50%;
-            border: 2.5px solid white; display: inline-flex; align-items: center;
-            justify-content: center; font-size: 13px; font-weight: 700; color: white;
-            margin-left: -8px;
+        .hero-proof { display: flex; gap: 30px; flex-wrap: wrap; padding-top: 22px; border-top: 1px solid #e3ddf7; max-width: 460px; }
+        .hero-proof-item strong {
+            font-family: 'Fraunces', serif; display: block;
+            font-size: 21px; font-weight: 600; color: #1e1b4b; line-height: 1;
         }
-        .avatars span:first-child { margin-left: 0; }
-        .proof-text p { font-size: 13px; font-weight: 600; color: #374151; margin: 0; }
-        .proof-text .stars { color: #f59e0b; font-size: 13px; }
-        .hero-img-col { position: relative; display: flex; align-items: flex-end; justify-content: center; }
-        .hero-img-col img { width: 100%; max-width: 560px; object-fit: contain; border-radius: 16px 16px 0 0; display: block; }
+        .hero-proof-item span { font-size: 11.5px; color: #6b7280; letter-spacing: .2px; }
 
-        /* ── FEATURE CARDS ── */
-        .features { padding: 54px 0 40px; background: white; }
-        .feat-card {
-            background: white; border: 1.5px solid #e5e7eb; border-radius: 16px;
-            padding: 26px 22px; transition: all 0.25s; height: 100%;
+        .hero-img-col { position: relative; display: flex; align-items: center; justify-content: center; }
+        .hero-photo-wrap { position: relative; max-width: 380px; width: 100%; }
+        .hero-photo-wrap::before {
+            content: ''; position: absolute; top: 22px; left: -22px;
+            width: 100%; height: 100%; border-radius: 20px;
+            background: #4f46e5; opacity: .12; z-index: 0;
         }
-        .feat-card:hover { border-color: #c4b5fd; box-shadow: 0 8px 28px rgba(79,70,229,0.1); transform: translateY(-4px); }
-        .feat-icon {
-            width: 52px; height: 52px; border-radius: 13px;
-            background: #ede9fe; display: flex; align-items: center;
-            justify-content: center; font-size: 22px; color: #6d28d9; margin-bottom: 16px;
+        .hero-photo-wrap img {
+            position: relative; z-index: 1;
+            width: 100%; aspect-ratio: 4/5; object-fit: cover;
+            border-radius: 20px; display: block;
+            box-shadow: 0 30px 60px -25px rgba(30,27,75,0.45);
         }
-        .feat-card h5 { font-size: 15px; font-weight: 700; color: #1e1b4b; margin-bottom: 8px; }
-        .feat-card p  { font-size: 13px; color: #6b7280; line-height: 1.6; margin-bottom: 14px; }
-        .feat-link { font-size: 13px; font-weight: 600; color: #4f46e5; text-decoration: none; }
-        .feat-link:hover { text-decoration: underline; }
+        .hero-photo-badge {
+            position: absolute; z-index: 2; left: -18px; bottom: 26px;
+            background: white; border-radius: 14px; padding: 12px 16px;
+            display: flex; align-items: center; gap: 11px;
+            box-shadow: 0 12px 30px -8px rgba(30,27,75,0.28);
+        }
+        .hero-photo-badge .badge-icon {
+            width: 38px; height: 38px; border-radius: 10px; flex-shrink: 0;
+            background: #ede9fe; color: #4f46e5;
+            display: flex; align-items: center; justify-content: center; font-size: 16px;
+        }
+        .hero-photo-badge strong { display: block; font-size: 15px; font-weight: 800; color: #1e1b4b; line-height: 1.1; }
+        .hero-photo-badge span { font-size: 11px; color: #6b7280; }
+
+        /* ── SERVICES (editorial list) ── */
+        .services { padding: 76px 0; background: white; }
+        .services-photo {
+            width: 100%; aspect-ratio: 5/4; object-fit: cover;
+            border-radius: 18px; margin-top: 24px;
+            box-shadow: 0 24px 50px -24px rgba(30,27,75,0.35);
+        }
+        .service-list { display: flex; flex-direction: column; }
+        .service-row {
+            display: flex; gap: 22px; padding: 24px 0;
+            border-bottom: 1px solid #ece9f7; transition: padding-left 0.2s;
+        }
+        .service-row:first-child { padding-top: 0; }
+        .service-row:last-child { border-bottom: none; }
+        .service-row:hover { padding-left: 6px; }
+        .service-num {
+            font-family: 'Fraunces', serif; font-size: 26px; font-weight: 600;
+            color: #c7bdf2; flex-shrink: 0; width: 46px; line-height: 1.3;
+        }
+        .service-row h5 { font-size: 16px; font-weight: 700; color: #1e1b4b; margin-bottom: 6px; }
+        .service-row p  { font-size: 13.5px; color: #6b7280; line-height: 1.6; margin: 0; }
 
         /* ── HOW IT WORKS ── */
         .how-section { padding: 60px 0; background: #f8f7ff; }
@@ -151,22 +180,22 @@
             font-size: 11px; font-weight: 700; letter-spacing: 2px;
             color: #7c3aed; text-transform: uppercase; margin-bottom: 10px;
         }
-        .section-title { font-size: 28px; font-weight: 800; color: #1e1b4b; margin-bottom: 12px; line-height: 1.25; }
+        .section-title { font-family: 'Fraunces', serif; font-size: 30px; font-weight: 600; color: #1e1b4b; margin-bottom: 12px; line-height: 1.25; letter-spacing: -.3px; }
         .section-sub    { font-size: 14px; color: #6b7280; line-height: 1.7; }
         .steps-row { display: flex; gap: 0; position: relative; }
         .steps-row::before {
             content: ''; position: absolute; top: 28px; left: 30px; right: 30px;
-            height: 2px; background: linear-gradient(90deg,#4f46e5,#7c3aed);
+            height: 2px; background: #ded7f7;
             z-index: 0; border-radius: 2px;
         }
         .step-item { flex: 1; text-align: center; position: relative; z-index: 1; }
         .step-num {
             width: 56px; height: 56px; border-radius: 50%;
-            background: linear-gradient(135deg,#4f46e5,#7c3aed);
-            color: white; font-weight: 800; font-size: 16px;
+            background: #1e1b4b;
+            color: white; font-family: 'Fraunces', serif; font-weight: 600; font-size: 18px;
             display: flex; align-items: center; justify-content: center;
             margin: 0 auto 16px; border: 4px solid white;
-            box-shadow: 0 4px 14px rgba(79,70,229,0.3);
+            box-shadow: 0 4px 14px rgba(30,27,75,0.25);
         }
         .step-icon-box {
             width: 52px; height: 52px; border-radius: 13px;
@@ -291,10 +320,8 @@
         <!-- Nav Links -->
         <div class="nav-links">
             <a href="index.php" class="active">Home</a>
-            <a href="#about">About Us</a>
             <a href="#how">How It Works</a>
-            <a href="#services">Services</a>
-            <a href="#features">Products</a>
+            <a href="#features">Services</a>
             <a href="track_order.php">Track Order</a>
             <a href="#contact">Contact</a>
         </div>
@@ -317,13 +344,13 @@
 <!-- ══ HERO ══ -->
 <section class="hero" id="home">
     <div class="container">
-        <div class="row align-items-end">
-            <div class="col-lg-6 pb-5">
+        <div class="row align-items-center">
+            <div class="col-lg-7 pb-5">
                 <div class="hero-tag">
                     <i class="fas fa-rocket" style="color:#7c3aed;"></i>
                     Your Trusted Import &amp; Shipping Partner
                 </div>
-                <h1>Import from <span>China,</span><br>We Handle <span>the Rest</span></h1>
+                <h1>Import from <em>China,</em><br>We handle <em>the rest.</em></h1>
                 <p class="hero-sub">We help you import quality products from China and deliver them safely to your doorstep in Tanzania.</p>
 
                 <div class="hero-checks">
@@ -341,62 +368,67 @@
                     </a>
                 </div>
 
-                <div class="social-proof">
-                    <div class="avatars">
-                        <span style="background:#4f46e5;">J</span>
-                        <span style="background:#7c3aed;">A</span>
-                        <span style="background:#ec4899;">M</span>
-                        <span style="background:#f59e0b;">S</span>
-                    </div>
-                    <div class="proof-text">
-                        <p>500+ Happy Customers</p>
-                        <div class="stars">★★★★★</div>
-                    </div>
+                <div class="hero-proof">
+                    <div class="hero-proof-item"><strong><?php echo number_format($stat_customers); ?></strong><span>Customers</span></div>
+                    <div class="hero-proof-item"><strong><?php echo number_format($stat_orders); ?></strong><span>Orders Placed</span></div>
+                    <div class="hero-proof-item"><strong><?php echo number_format($stat_items); ?></strong><span>Items Imported</span></div>
                 </div>
             </div>
 
             <!-- Hero Image -->
-            <div class="col-lg-6 hero-img-col">
-                <img src="image/background.png" alt="Import from China to Tanzania">
+            <div class="col-lg-5 hero-img-col">
+                <div class="hero-photo-wrap">
+                    <img src="image/mzigo.jpg" alt="Packages ready for shipping to Tanzania">
+                    <div class="hero-photo-badge">
+                        <div class="badge-icon"><i class="fas fa-box-open"></i></div>
+                        <div><strong><?php echo number_format($stat_orders); ?></strong><span>Orders placed</span></div>
+                    </div>
+                </div>
             </div>
         </div>
     </div>
 </section>
 
-<!-- ══ FEATURE CARDS ══ -->
-<section class="features" id="features">
+<!-- ══ SERVICES ══ -->
+<section class="services" id="features">
     <div class="container">
-        <div class="row g-4">
-            <div class="col-md-6 col-lg-3">
-                <div class="feat-card">
-                    <div class="feat-icon"><i class="fas fa-shopping-cart"></i></div>
-                    <h5>Buy From Any Store in China</h5>
-                    <p>We help you buy from Taobao, 1688, Alibaba &amp; more.</p>
-                    <a href="customer_login.php" class="feat-link">Learn More &rarr;</a>
-                </div>
+        <div class="row g-5">
+            <div class="col-lg-5">
+                <p class="section-label">WHAT WE DO</p>
+                <h2 class="section-title">Everything you need to import with confidence</h2>
+                <p class="section-sub">From sourcing to your doorstep — one partner handles the whole journey.</p>
+                <img src="image/c.jpg" class="services-photo" alt="Packed shipment ready for delivery">
             </div>
-            <div class="col-md-6 col-lg-3">
-                <div class="feat-card">
-                    <div class="feat-icon"><i class="fas fa-warehouse"></i></div>
-                    <h5>Consolidation</h5>
-                    <p>We receive, inspect and combine your items safely.</p>
-                    <a href="#how" class="feat-link">Learn More &rarr;</a>
-                </div>
-            </div>
-            <div class="col-md-6 col-lg-3">
-                <div class="feat-card">
-                    <div class="feat-icon"><i class="fas fa-shipping-fast"></i></div>
-                    <h5>Fast Shipping</h5>
-                    <p>We ship by air or sea at very affordable rates.</p>
-                    <a href="track_order.php" class="feat-link">Learn More &rarr;</a>
-                </div>
-            </div>
-            <div class="col-md-6 col-lg-3">
-                <div class="feat-card">
-                    <div class="feat-icon"><i class="fas fa-shield-alt"></i></div>
-                    <h5>Safe Delivery</h5>
-                    <p>Your goods are delivered safely to your location.</p>
-                    <a href="#contact" class="feat-link">Learn More &rarr;</a>
+            <div class="col-lg-7">
+                <div class="service-list">
+                    <div class="service-row">
+                        <span class="service-num">01</span>
+                        <div>
+                            <h5>Buy From Any Store in China</h5>
+                            <p>We help you buy from Taobao, 1688, Alibaba &amp; more — even if they don't ship internationally.</p>
+                        </div>
+                    </div>
+                    <div class="service-row">
+                        <span class="service-num">02</span>
+                        <div>
+                            <h5>Consolidation</h5>
+                            <p>We receive, inspect and combine your items at our warehouse to save you on shipping.</p>
+                        </div>
+                    </div>
+                    <div class="service-row">
+                        <span class="service-num">03</span>
+                        <div>
+                            <h5>Fast Shipping</h5>
+                            <p>We ship by air or sea at very affordable rates, whichever suits your timeline and budget.</p>
+                        </div>
+                    </div>
+                    <div class="service-row">
+                        <span class="service-num">04</span>
+                        <div>
+                            <h5>Safe Delivery</h5>
+                            <p>We clear customs and deliver your goods safely to your doorstep, anywhere in Tanzania.</p>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
@@ -450,19 +482,19 @@
                 <div class="stats-grid">
                     <div class="stat-item">
                         <div class="stat-icon-box" style="background:#ede9fe;color:#6d28d9;"><i class="fas fa-users"></i></div>
-                        <div><p class="sval">500+</p><p class="slbl">Happy Customers</p></div>
+                        <div><p class="sval"><?php echo number_format($stat_customers); ?></p><p class="slbl">Customers</p></div>
                     </div>
                     <div class="stat-item">
                         <div class="stat-icon-box" style="background:#dcfce7;color:#16a34a;"><i class="fas fa-box"></i></div>
-                        <div><p class="sval">1000+</p><p class="slbl">Orders Delivered</p></div>
+                        <div><p class="sval"><?php echo number_format($stat_orders); ?></p><p class="slbl">Orders Placed</p></div>
                     </div>
                     <div class="stat-item">
-                        <div class="stat-icon-box" style="background:#fef3c7;color:#d97706;"><i class="fas fa-star"></i></div>
-                        <div><p class="sval">5+</p><p class="slbl">Years Experience</p></div>
+                        <div class="stat-icon-box" style="background:#fef3c7;color:#d97706;"><i class="fas fa-cubes"></i></div>
+                        <div><p class="sval"><?php echo number_format($stat_items); ?></p><p class="slbl">Items Imported</p></div>
                     </div>
                     <div class="stat-item">
-                        <div class="stat-icon-box" style="background:#dbeafe;color:#2563eb;"><i class="fas fa-smile"></i></div>
-                        <div><p class="sval">98%</p><p class="slbl">Customer Satisfaction</p></div>
+                        <div class="stat-icon-box" style="background:#dbeafe;color:#2563eb;"><i class="fas fa-credit-card"></i></div>
+                        <div><p class="sval"><?php echo number_format($stat_payments); ?></p><p class="slbl">Payments Completed</p></div>
                     </div>
                 </div>
             </div>
@@ -503,10 +535,10 @@
             <div class="col-lg-2 col-6">
                 <h6>Services</h6>
                 <ul>
-                    <li><a href="#">Product Sourcing</a></li>
-                    <li><a href="#">Consolidation</a></li>
-                    <li><a href="#">Air Shipping</a></li>
-                    <li><a href="#">Sea Shipping</a></li>
+                    <li><a href="#features">Product Sourcing</a></li>
+                    <li><a href="#features">Consolidation</a></li>
+                    <li><a href="#features">Air Shipping</a></li>
+                    <li><a href="#features">Sea Shipping</a></li>
                 </ul>
             </div>
 
@@ -547,7 +579,9 @@
 // Smooth scroll
 document.querySelectorAll('a[href^="#"]').forEach(a => {
     a.addEventListener('click', e => {
-        const target = document.querySelector(a.getAttribute('href'));
+        const href = a.getAttribute('href');
+        if (href.length <= 1) return;
+        const target = document.querySelector(href);
         if (target) { e.preventDefault(); target.scrollIntoView({ behavior: 'smooth' }); }
     });
 });

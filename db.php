@@ -1,8 +1,5 @@
 <?php
-$host = "localhost";
-$dbname = "order_desk";
-$username = "root";
-$password = "";
+require_once __DIR__ . '/db_config.php';
 
 try {
     $conn = new PDO(
