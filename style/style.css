@@ -29,23 +29,305 @@ body {
     }
 
 /* Input fields and buttons */
-input, button {
-    /* background-color: rgb(232, 226, 226); */
-    padding: 10px;
-    margin: 5px 0;
-    /* color: gray; */
+
+/* Body: responsive full-page background */
+body {
+    margin: 0;
+    padding: 20px;
+    box-sizing: border-box;
+
+    display: flex;
+    justify-content: center;
+    align-items: center;
+
+    min-height: 100vh;
+    min-height: 100dvh;
+
+    background: url("/order_desk/image/bg.jpg")
+        no-repeat center center;
+    background-size: cover;
+    background-attachment: fixed;
+}
+
+/* Include padding and borders in element widths */
+*,
+*::before,
+*::after {
+    box-sizing: border-box;
+}
+
+/* Responsive container */
+.container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+
+    width: 100%;
+    max-width: 400px;
+    padding: 24px;
+
+    text-align: center;
+}
+
+/* Inputs and buttons */
+input,
+button {
+    width: 100%;
+    max-width: 100%;
+    padding: 12px;
+    margin: 6px 0;
+
     border: none;
     border-radius: 10px;
     font-size: 16px;
 }
 
+/* Allow long text and headings to fit */
+h2 {
+    color: aqua;
+    text-align: center;
+    overflow-wrap: anywhere;
+}
+
 /* Button hover effect */
+button {
+    cursor: pointer;
+    transition: background-color 0.3s, opacity 0.3s;
+}
+
 button:hover {
     background-color: blue;
-    opacity: 0.8;                
-    cursor: pointer;
-    transition: 0.3s;           
+    opacity: 0.8;
 }
-h2{
-    color: aqua;
+
+/* Phones */
+@media (max-width: 480px) {
+    body {
+        padding: 12px;
+        background-attachment: scroll;
+        font-size: 14px;
+    }
+
+    .container {
+        padding: 16px;
+    }
+
+    .btn,
+    button {
+        width: 100%;
+        padding: 12px;
+        font-size: 16px;
+        display: block;
+        text-align: center;
+        box-sizing: border-box;
+    }
+
+    .btn-inline {
+        width: auto !important;
+        display: inline-block;
+    }
+
+    input,
+    select, textarea {
+        width: 100%;
+        font-size: 16px;
+        padding: 12px;
+        box-sizing: border-box;
+    }
+
+    .login-box {
+        width: 100% !important;
+        padding: 16px;
+    }
+
+    .login-box h2 {
+        font-size: 18px;
+    }
+
+    .login-box input[type="text"],
+    .login-box input[type="password"],
+    .login-box input[type="email"] {
+        width: 100% !important;
+    }
+
+    .header {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+
+    .header .admin-controls {
+        width: 100%;
+        flex-wrap: wrap;
+        gap: 8px;
+    }
+
+    .order-summary {
+        width: 100% !important;
+        position: static !important;
+        margin: 16px 0 0 0 !important;
+    }
+
+    .card-grid, .grid-2, .grid-3, .grid-4 {
+        grid-template-columns: 1fr !important;
+        gap: 12px !important;
+    }
+
+    .hero {
+        padding: 16px 0;
+        text-align: center;
+    }
+
+    .hero h2 {
+        font-size: 22px;
+    }
+
+    .hero-buttons {
+        flex-direction: column;
+        gap: 8px;
+    }
+
+    .footer-grid {
+        grid-template-columns: 1fr !important;
+        gap: 16px !important;
+    }
+
+    .sidebar {
+        width: 100% !important;
+        position: static !important;
+        flex-direction: row !important;
+        flex-wrap: wrap;
+        justify-content: center;
+        padding: 8px;
+    }
+
+    .sidebar a {
+        width: 100%;
+        text-align: center;
+    }
+
+    .main-content {
+        margin-left: 0 !important;
+        padding: 12px;
+    }
+
+    .steps-row {
+        flex-direction: column;
+        gap: 12px;
+    }
+
+    .step-item {
+        flex-direction: column;
+        text-align: center;
+    }
+
+    .step-arrow {
+        display: none;
+    }
+
+    .admin-nav {
+        flex-direction: column !important;
+        flex-wrap: wrap;
+    }
+
+    .admin-nav a {
+        width: 100%;
+        text-align: center;
+    }
+
+    .modal {
+        width: 95% !important;
+        max-width: 95% !important;
+    }
+
+    .chat-container {
+        position: fixed;
+        bottom: 0;
+        right: 0;
+        left: 0;
+        width: 100%;
+        height: 50%;
+        border-radius: 12px 12px 0 0;
+    }
+
+    .chat-toggle {
+        width: 44px;
+        height: 44px;
+    }
+
+    .payment-info, .refund-info {
+        flex-direction: column !important;
+    }
+
+    .form-row {
+        flex-direction: column !important;
+    }
+
+    .form-row > * {
+        flex: 1 1 100% !important;
+    }
+
+    .dashboard-grid {
+        grid-template-columns: 1fr !important;
+    }
+}
+
+/* Tablets */
+@media (min-width: 481px) and (max-width: 1024px) {
+    body {
+        padding: 24px;
+    }
+
+    .container {
+        max-width: 440px;
+    }
+}
+
+/* Prevent padding from increasing element width */
+*,
+*::before,
+*::after {
+    box-sizing: border-box;
+}
+
+/* Prevent the page from exceeding the viewport */
+html,
+body {
+    width: 100%;
+    max-width: 100%;
+    margin: 0;
+}
+
+body {
+    overflow-x: clip;
+}
+
+/* Keep images and media within their parent */
+img,
+video,
+iframe {
+    max-width: 100%;
+}
+
+/* Let flex and grid children shrink */
+.container,
+section,
+main,
+header,
+footer {
+    min-width: 0;
+}
+
+@media (max-width: 768px) {
+    .container {
+        width: 100%;
+        max-width: 100%;
+    }
+
+    h1,
+    h2,
+    h3,
+    p {
+        overflow-wrap: anywhere;
+    }
 }

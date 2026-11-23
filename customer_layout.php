@@ -41,15 +41,25 @@ $_notif_count = $_active_orders + $_pending_refunds;
 ?>
 <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
-    body { font-family: 'Inter','Segoe UI',sans-serif; background: #f0f2f5; overflow-x: hidden; }
+    body {
+        font-family: 'Inter','Segoe UI',sans-serif; background: #f0f2f5;
+        overflow-x: hidden;
+        padding-left: env(safe-area-inset-left);
+        padding-right: env(safe-area-inset-right);
+    }
 
-    /* ── Sidebar ── */
+    /* ════════════════════════════════════
+       SIDEBAR
+       ════════════════════════════════════ */
     .sidebar {
         position: fixed; left: 0; top: 0; width: 250px; height: 100%;
         background: linear-gradient(180deg,#0f1729 0%,#1a1a2e 100%);
-        z-index: 1000; overflow-y: auto; display: flex; flex-direction: column;
+        z-index: 1100; overflow-y: auto; display: flex; flex-direction: column;
         box-shadow: 3px 0 15px rgba(0,0,0,0.15);
         scrollbar-width: none;
+        padding-top: env(safe-area-inset-top);
+        padding-bottom: env(safe-area-inset-bottom);
+        transition: transform 0.32s cubic-bezier(0.4,0,0.2,1);
     }
     .sidebar::-webkit-scrollbar { display: none; }
     .sidebar-header {
@@ -77,7 +87,11 @@ $_notif_count = $_active_orders + $_pending_refunds;
         display: flex; align-items: center; justify-content: center;
         color: white; font-weight: 700; font-size: 16px; flex-shrink: 0;
     }
-    .cust-info .cname { color: white; font-size: 12.5px; font-weight: 600; margin: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 130px; }
+    .cust-info { min-width: 0; flex: 1; }
+    .cust-info .cname {
+        color: white; font-size: 12.5px; font-weight: 600; margin: 0;
+        white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    }
     .cust-info .role-badge {
         background: #3b82f6; color: white; font-size: 9px; font-weight: 700;
         padding: 1px 6px; border-radius: 20px; text-transform: uppercase;
@@ -86,18 +100,19 @@ $_notif_count = $_active_orders + $_pending_refunds;
 
     .sidebar-nav { padding: 6px 10px; flex: 1; }
     .sidebar-nav a {
-        color: rgba(255,255,255,0.65); padding: 9px 11px; text-decoration: none;
+        color: rgba(255,255,255,0.65); padding: 10px 11px; text-decoration: none;
         display: flex; align-items: center; gap: 10px;
-        border-radius: 8px; margin-bottom: 2px; transition: all 0.2s; font-size: 13px;
+        border-radius: 8px; margin-bottom: 2px; transition: all 0.2s;
+        font-size: 13.5px; min-height: 44px;
     }
     .sidebar-nav a:hover { background: rgba(255,255,255,0.08); color: white; }
     .sidebar-nav a.active { background: rgba(59,130,246,0.22); color: white; }
     .sidebar-nav a.active i { color: #60a5fa; }
-    .sidebar-nav a i { width: 17px; font-size: 13px; }
+    .sidebar-nav a i { width: 17px; font-size: 13px; flex-shrink: 0; }
     .wallet-pill {
         margin-left: auto; background: rgba(59,130,246,0.3);
         color: #93c5fd; font-size: 10px; font-weight: 700;
-        padding: 1px 7px; border-radius: 20px;
+        padding: 2px 8px; border-radius: 20px;
     }
     .nav-divider { border-color: rgba(255,255,255,0.08); margin: 6px 0; }
 
@@ -114,10 +129,12 @@ $_notif_count = $_active_orders + $_pending_refunds;
     .promo-box p  { color: rgba(255,255,255,0.7); font-size: 10px; margin-bottom: 8px; line-height: 1.4; }
     .promo-box .btn-promo {
         background: #3b82f6; color: white; border: none; border-radius: 6px;
-        padding: 4px 12px; font-size: 11px; font-weight: 600; cursor: pointer;
+        padding: 6px 14px; font-size: 11px; font-weight: 600; cursor: pointer;
+        min-height: 32px;
     }
+
     .wa-support {
-        padding: 10px 14px 14px; display: flex; align-items: center; gap: 8px;
+        padding: 12px 14px 16px; display: flex; align-items: center; gap: 8px;
         border-top: 1px solid rgba(255,255,255,0.08);
     }
     .wa-support .wa-icon {
@@ -128,26 +145,54 @@ $_notif_count = $_active_orders + $_pending_refunds;
     .wa-support .wa-text p { color: rgba(255,255,255,0.5); font-size: 9px; margin: 0; }
     .wa-support .wa-text span { color: white; font-size: 11px; font-weight: 600; }
 
-    /* ── Top Navbar ── */
+    /* Sidebar backdrop (mobile) */
+    .sidebar-backdrop {
+        position: fixed; inset: 0; background: rgba(15,23,41,0.55);
+        backdrop-filter: blur(3px); -webkit-backdrop-filter: blur(3px);
+        z-index: 1099; opacity: 0; pointer-events: none;
+        transition: opacity 0.3s;
+    }
+    .sidebar-backdrop.open { opacity: 1; pointer-events: auto; }
+
+    /* ════════════════════════════════════
+       TOP NAVBAR
+       ════════════════════════════════════ */
     .top-navbar {
-        position: fixed; top: 0; left: 250px; right: 0; height: 62px;
+        position: fixed; top: 0; left: 250px; right: 0;
+        height: calc(62px + env(safe-area-inset-top));
         background: white; z-index: 999;
         display: flex; align-items: center; padding: 0 24px; gap: 14px;
         box-shadow: 0 1px 8px rgba(0,0,0,0.07);
+        transition: left 0.32s cubic-bezier(0.4,0,0.2,1);
+        padding-top: env(safe-area-inset-top);
     }
-    .navbar-welcome { flex: 1; }
-    .navbar-welcome h5 { font-size: 15px; font-weight: 700; color: #0f172a; margin: 0; }
+    .navbar-toggle {
+        display: none; width: 40px; height: 40px; border-radius: 9px;
+        border: 1px solid #e2e8f0; background: #f8fafc; color: #1e293b;
+        align-items: center; justify-content: center; font-size: 16px;
+        cursor: pointer; flex-shrink: 0;
+    }
+    .navbar-toggle:hover { background: #e2e8f0; }
+    .navbar-welcome { flex: 1; min-width: 0; }
+    .navbar-welcome h5 {
+        font-size: 15px; font-weight: 700; color: #0f172a; margin: 0;
+        white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    }
     .navbar-welcome p  { font-size: 11px; color: #94a3b8; margin: 0; }
     .navbar-search { flex: 0 0 200px; position: relative; }
     .navbar-search input {
-        width: 100%; padding: 7px 14px 7px 34px;
+        width: 100%; padding: 8px 14px 8px 34px;
         border: 1.5px solid #e2e8f0; border-radius: 20px;
-        font-size: 12.5px; background: #f8fafc; outline: none;
+        font-size: 13px; background: #f8fafc; outline: none;
+        min-height: 38px;
     }
-    .navbar-search i { position: absolute; left: 11px; top: 50%; transform: translateY(-50%); color: #94a3b8; font-size: 12px; }
-    .navbar-icons { display: flex; align-items: center; gap: 6px; }
+    .navbar-search i {
+        position: absolute; left: 11px; top: 50%; transform: translateY(-50%);
+        color: #94a3b8; font-size: 12px;
+    }
+    .navbar-icons { display: flex; align-items: center; gap: 6px; flex-shrink: 0; }
     .nav-icon-btn {
-        width: 34px; height: 34px; border-radius: 9px;
+        width: 38px; height: 38px; border-radius: 9px;
         border: none; background: #f1f5f9; color: #64748b;
         display: flex; align-items: center; justify-content: center;
         cursor: pointer; font-size: 14px; position: relative;
@@ -155,34 +200,45 @@ $_notif_count = $_active_orders + $_pending_refunds;
     }
     .nav-icon-btn:hover { background: #e2e8f0; color: #1e293b; }
     .nav-icon-btn .dot {
-        position: absolute; top: 5px; right: 5px;
+        position: absolute; top: 6px; right: 6px;
         width: 7px; height: 7px; background: #ef4444; border-radius: 50%;
         border: 1.5px solid white;
     }
     .nav-icon-btn.wa { background: #dcfce7; color: #16a34a; }
+    .nav-icon-btn.wa:hover { background: #bbf7d0; }
+
     .navbar-profile {
         display: flex; align-items: center; gap: 7px;
-        padding: 3px 10px 3px 4px;
+        padding: 4px 10px 4px 4px;
         border: 1.5px solid #e2e8f0; border-radius: 24px; cursor: pointer;
-        text-decoration: none;
+        text-decoration: none; flex-shrink: 0;
     }
     .navbar-profile .pa {
-        width: 28px; height: 28px; border-radius: 50%;
+        width: 30px; height: 30px; border-radius: 50%;
         background: linear-gradient(135deg,#3b82f6,#6366f1);
         display: flex; align-items: center; justify-content: center;
-        color: white; font-weight: 700; font-size: 11px;
+        color: white; font-weight: 700; font-size: 11px; flex-shrink: 0;
     }
-    .navbar-profile .pname  { font-size: 12px; font-weight: 600; color: #1e293b; }
-    .navbar-profile .pphone { font-size: 10px; color: #94a3b8; }
+    .navbar-profile .pname  { font-size: 12px; font-weight: 600; color: #1e293b; line-height: 1.2; }
+    .navbar-profile .pphone { font-size: 10px; color: #94a3b8; line-height: 1.2; }
 
-    /* ── Main Content ── */
-    .main-content { margin-left: 250px; padding: 78px 22px 30px; }
+    /* ════════════════════════════════════
+       MAIN CONTENT
+       ════════════════════════════════════ */
+    .main-content {
+        margin-left: 250px;
+        padding: calc(78px + env(safe-area-inset-top)) 22px calc(32px + env(safe-area-inset-bottom));
+        max-width: 100%;
+        transition: margin-left 0.32s cubic-bezier(0.4,0,0.2,1);
+        min-height: 100vh;
+    }
 
     /* ── Shared components ── */
     .page-header {
         background: white; border-radius: 14px; padding: 18px 22px;
         margin-bottom: 22px; box-shadow: 0 2px 8px rgba(0,0,0,0.05);
-        display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap;
+        display: flex; justify-content: space-between; align-items: center;
+        gap: 12px; flex-wrap: wrap;
     }
     .page-header h1 { font-size: 20px; font-weight: 700; color: #0f172a; margin: 0; }
     .page-header p  { font-size: 12px; color: #64748b; margin: 4px 0 0; }
@@ -196,21 +252,24 @@ $_notif_count = $_active_orders + $_pending_refunds;
     .stat-icon {
         width: 42px; height: 42px; border-radius: 11px;
         display: flex; align-items: center; justify-content: center; font-size: 18px;
+        flex-shrink: 0;
     }
 
     .table-card { background: white; border-radius: 13px; padding: 18px 20px; box-shadow: 0 2px 8px rgba(0,0,0,0.05); }
-    .table th { font-size: 11px; font-weight: 600; color: #64748b; background: #f8fafc; text-transform: uppercase; letter-spacing: 0.4px; padding: 10px 14px; }
+    .table th { font-size: 11px; font-weight: 600; color: #64748b; background: #f8fafc; text-transform: uppercase; letter-spacing: 0.4px; padding: 10px 14px; white-space: nowrap; }
     .table td { font-size: 13px; vertical-align: middle; padding: 11px 14px; }
 
     .form-card { background: white; border-radius: 14px; padding: 26px; box-shadow: 0 2px 8px rgba(0,0,0,0.05); }
 
     .tbl-search {
-        border: 1.5px solid #e2e8f0; border-radius: 20px; padding: 7px 14px 7px 34px;
-        font-size: 12.5px; background: #f8fafc; outline: none; width: 200px;
+        border: 1.5px solid #e2e8f0; border-radius: 20px;
+        padding: 8px 14px 8px 34px; font-size: 13px;
+        background: #f8fafc; outline: none; width: 200px;
+        min-height: 38px;
     }
 
     /* Status badges */
-    .sbadge { display: inline-block; padding: 3px 9px; border-radius: 20px; font-size: 11px; font-weight: 600; }
+    .sbadge { display: inline-block; padding: 3px 9px; border-radius: 20px; font-size: 11px; font-weight: 600; white-space: nowrap; }
     .sb-processing { background: #fef9c3; color: #854d0e; }
     .sb-shipped    { background: #dbeafe; color: #1d4ed8; }
     .sb-transit    { background: #ede9fe; color: #5b21b6; }
@@ -226,13 +285,14 @@ $_notif_count = $_active_orders + $_pending_refunds;
 
     /* ── Notification dropdown ── */
     .notif-badge {
-        position: absolute; top: 4px; right: 4px;
-        width: 16px; height: 16px; background: #ef4444; border-radius: 50%;
+        position: absolute; top: 3px; right: 3px;
+        min-width: 16px; height: 16px; background: #ef4444; border-radius: 50%;
         border: 2px solid white; display: flex; align-items: center;
         justify-content: center; font-size: 9px; font-weight: 700; color: white;
+        padding: 0 3px;
     }
     .notif-dropdown {
-        width: 320px; padding: 0; border: none;
+        width: 340px; padding: 0; border: none;
         border-radius: 14px; box-shadow: 0 10px 40px rgba(0,0,0,0.14);
         overflow: hidden;
     }
@@ -243,10 +303,10 @@ $_notif_count = $_active_orders + $_pending_refunds;
     }
     .notif-header h6 { font-size: 13px; font-weight: 700; color: #0f172a; margin: 0; }
     .notif-header span { font-size: 11px; color: #64748b; }
-    .notif-list { max-height: 320px; overflow-y: auto; }
+    .notif-list { max-height: 360px; overflow-y: auto; }
     .notif-item {
         display: flex; align-items: flex-start; gap: 10px;
-        padding: 11px 16px; border-bottom: 1px solid #f1f5f9;
+        padding: 12px 16px; border-bottom: 1px solid #f1f5f9;
         text-decoration: none; transition: background 0.15s;
     }
     .notif-item:hover { background: #f8fafc; }
@@ -269,29 +329,108 @@ $_notif_count = $_active_orders + $_pending_refunds;
     .notif-body .nb-sub   { font-size: 11px; color: #64748b; margin-top: 1px; }
     .notif-body .nb-time  { font-size: 10px; color: #94a3b8; margin-top: 2px; }
     .notif-footer {
-        padding: 10px 16px; text-align: center;
+        padding: 12px 16px; text-align: center;
         border-top: 1px solid #e2e8f0; background: #f8fafc;
     }
     .notif-footer a { font-size: 12px; font-weight: 600; color: #3b82f6; text-decoration: none; }
     .notif-empty { padding: 28px; text-align: center; color: #94a3b8; font-size: 13px; }
 
-    /* ── WhatsApp button ── */
-    .nav-icon-btn.wa { background: #dcfce7; color: #16a34a; }
-    .nav-icon-btn.wa:hover { background: #bbf7d0; }
-
+    /* ════════════════════════════════════
+       RESPONSIVE — TABLET (≤ 992px)
+       ════════════════════════════════════ */
     @media (max-width: 992px) {
-        .sidebar { width: 64px; }
-        .logo-text, .cust-info, .verified-tick, .sidebar-nav a span,
-        .wallet-pill, .promo-box, .wa-support .wa-text { display: none; }
-        .cust-profile { justify-content: center; }
-        .top-navbar { left: 64px; }
-        .main-content { margin-left: 64px; }
-        .navbar-welcome p, .navbar-search { display: none; }
+        /* Sidebar slides off-canvas */
+        .sidebar { transform: translateX(-100%); width: 270px; }
+        .sidebar.open { transform: translateX(0); }
+
+        /* Navbar spans full width, hamburger appears */
+        .top-navbar { left: 0; padding: env(safe-area-inset-top) 16px 0; }
+        .navbar-toggle { display: inline-flex; }
+
+        /* Content full width */
+        .main-content {
+            margin-left: 0;
+            padding: calc(78px + env(safe-area-inset-top)) 16px calc(28px + env(safe-area-inset-bottom));
+        }
+
+        /* Search narrows; 16px text stops iOS zooming in on focus */
+        .navbar-welcome p { display: none; }
+        .navbar-search { flex: 0 0 160px; }
+        .navbar-search input, .tbl-search { font-size: 16px; }
+        .navbar-profile .pphone { display: none; }
+    }
+
+    /* ════════════════════════════════════
+       RESPONSIVE — MOBILE (≤ 640px)
+       ════════════════════════════════════ */
+    @media (max-width: 640px) {
+        .top-navbar { height: calc(58px + env(safe-area-inset-top)); gap: 8px; padding: env(safe-area-inset-top) 12px 0; }
+        .navbar-welcome h5 { font-size: 13px; }
+        .navbar-welcome p { display: none; }
+        .navbar-search { display: none; }
+        .navbar-icons { gap: 4px; }
+        .nav-icon-btn { width: 36px; height: 36px; font-size: 13px; }
+        .navbar-profile { padding: 3px 8px 3px 3px; gap: 6px; }
+        .navbar-profile .pa { width: 26px; height: 26px; font-size: 10px; }
+        .navbar-profile .pname { font-size: 11.5px; }
+        .navbar-profile .pphone { display: none; }
+
+        .main-content {
+            padding: calc(72px + env(safe-area-inset-top)) 12px calc(24px + env(safe-area-inset-bottom));
+        }
+        .stat-card:hover, .qa-card:hover { transform: none; }
+
+        .page-header { padding: 14px 16px; border-radius: 12px; }
+        .page-header h1 { font-size: 17px; }
+        .page-header p { font-size: 11.5px; }
+
+        .stat-card { padding: 13px 14px; border-radius: 11px; }
+        .stat-icon { width: 36px; height: 36px; font-size: 15px; border-radius: 9px; }
+
+        .table-card { padding: 14px 12px; border-radius: 12px; }
+        .table th { font-size: 10px; padding: 8px 6px; }
+        .table td { font-size: 12px; padding: 8px 6px; }
+        .sbadge { font-size: 10px; padding: 2px 7px; }
+
+        .form-card { padding: 18px 16px; border-radius: 12px; }
+
+        .tbl-search { width: 100%; }
+
+        /* Notification dropdown full-width on mobile */
+        .notif-dropdown {
+            width: calc(100vw - 24px) !important;
+            max-width: 340px;
+            position: fixed !important;
+            top: calc(62px + env(safe-area-inset-top)) !important;
+            left: 12px !important;
+            right: 12px !important;
+            margin: 0 auto !important;
+            transform: none !important;
+        }
+        .notif-list { max-height: 55vh; }
+    }
+
+    /* Very small phones */
+    @media (max-width: 380px) {
+        .navbar-welcome h5 { font-size: 12px; }
+        .navbar-profile .pname { display: none; }
+        .navbar-profile { padding: 3px; }
+    }
+
+    /* Reduced motion */
+    @media (prefers-reduced-motion: reduce) {
+        *, *::before, *::after {
+            animation-duration: 0.01ms !important;
+            transition-duration: 0.01ms !important;
+        }
     }
 </style>
 
+<!-- ══ SIDEBAR BACKDROP ══ -->
+<div class="sidebar-backdrop" id="sidebarBackdrop" onclick="closeSidebar()"></div>
+
 <!-- ══ SIDEBAR ══ -->
-<div class="sidebar">
+<div class="sidebar" id="sidebar">
     <div class="sidebar-header">
         <div class="logo">
             <div class="logo-icon">
@@ -363,14 +502,22 @@ $_notif_count = $_active_orders + $_pending_refunds;
 
 <!-- ══ TOP NAVBAR ══ -->
 <div class="top-navbar">
+    <!-- Hamburger (mobile only) -->
+    <button class="navbar-toggle" onclick="openSidebar()" aria-label="Open menu"
+            aria-expanded="false" aria-controls="sidebar">
+        <i class="fas fa-bars"></i>
+    </button>
+
     <div class="navbar-welcome">
         <h5><?php echo htmlspecialchars($pt['title']); ?></h5>
         <p><?php echo htmlspecialchars($pt['sub']); ?></p>
     </div>
+
     <div class="navbar-search">
         <i class="fas fa-search"></i>
         <input type="text" placeholder="Search...">
     </div>
+
     <div class="navbar-icons">
 
         <!-- Notification Bell -->
@@ -393,7 +540,6 @@ $_notif_count = $_active_orders + $_pending_refunds;
                 </div>
                 <div class="notif-list">
                 <?php
-                // Order notifications
                 $status_icon = [
                     'Processing'  => ['ni-process','fa-clock'],
                     'Shipped'     => ['ni-truck',  'fa-truck'],
@@ -469,3 +615,45 @@ $_notif_count = $_active_orders + $_pending_refunds;
         </a>
     </div>
 </div>
+
+<script>
+/* ── Sidebar drawer (mobile + tablet only) ── */
+function openSidebar(){
+    if (window.innerWidth > 992) return;
+    document.getElementById('sidebar').classList.add('open');
+    document.getElementById('sidebarBackdrop').classList.add('open');
+    const btn = document.querySelector('.navbar-toggle');
+    if (btn) btn.setAttribute('aria-expanded', 'true');
+    document.body.style.overflow = 'hidden';
+}
+function closeSidebar(){
+    document.getElementById('sidebar').classList.remove('open');
+    document.getElementById('sidebarBackdrop').classList.remove('open');
+    const btn = document.querySelector('.navbar-toggle');
+    if (btn) btn.setAttribute('aria-expanded', 'false');
+    document.body.style.overflow = '';
+}
+document.addEventListener('keydown', e => {
+    if (e.key === 'Escape') closeSidebar();
+});
+
+/* Auto-close drawer on nav link tap (mobile) */
+document.querySelectorAll('.sidebar-nav a').forEach(a => {
+    a.addEventListener('click', () => {
+        if (window.innerWidth <= 992) closeSidebar();
+    });
+});
+
+/* Reset drawer state on resize to desktop */
+let _resizeTimer;
+window.addEventListener('resize', () => {
+    clearTimeout(_resizeTimer);
+    _resizeTimer = setTimeout(() => {
+        if (window.innerWidth > 992) {
+            document.getElementById('sidebar').classList.remove('open');
+            document.getElementById('sidebarBackdrop').classList.remove('open');
+            document.body.style.overflow = '';
+        }
+    }, 150);
+});
+</script>

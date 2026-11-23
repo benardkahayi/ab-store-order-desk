@@ -63,7 +63,7 @@ $delivered = $stmt3->fetchColumn();
 <html lang="sw">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
     <title>My Profile - AB FASHIONSTORE</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
@@ -79,8 +79,26 @@ $delivered = $stmt3->fetchColumn();
             display: flex; align-items: center; justify-content: center;
             font-size: 34px; font-weight: 700; border: 3px solid rgba(255,255,255,0.5); flex-shrink: 0;
         }
-        .info-row { display: flex; justify-content: space-between; align-items: center; padding: 10px 0; border-bottom: 1px solid #f1f5f9; font-size: 13.5px; }
+        .profile-banner { flex-wrap: wrap; }
+        .pb-info { flex: 1; min-width: 0; }
+        .pb-info h2, .pb-info p { overflow-wrap: anywhere; }
+        .info-row { display: flex; justify-content: space-between; align-items: center; gap: 12px; padding: 10px 0; border-bottom: 1px solid #f1f5f9; font-size: 13.5px; }
         .info-row:last-child { border-bottom: none; }
+        .profile-actions .btn, .stats-actions .btn { min-height: 42px; display: inline-flex; align-items: center; justify-content: center; }
+
+        @media (max-width: 640px) {
+            .profile-banner { padding: 18px 16px; gap: 14px; border-radius: 12px; margin-bottom: 16px; }
+            .big-avatar { width: 58px; height: 58px; font-size: 26px; }
+            .pb-info h2 { font-size: 17px !important; }
+            .pb-status {
+                flex-basis: 100%; margin-left: 0 !important; text-align: left !important;
+                display: flex; align-items: center; justify-content: space-between; gap: 10px;
+                padding-top: 12px; border-top: 1px solid rgba(255,255,255,0.2);
+            }
+            .pb-status > div { margin-top: 0 !important; }
+            .profile-actions { flex-direction: column; }
+            .profile-actions .btn { width: 100%; }
+        }
     </style>
 </head>
 <body>
@@ -91,14 +109,14 @@ $delivered = $stmt3->fetchColumn();
     <!-- Profile Banner -->
     <div class="profile-banner">
         <div class="big-avatar"><?php echo strtoupper(substr($customer['name'], 0, 1)); ?></div>
-        <div>
+        <div class="pb-info">
             <h2 class="fw-bold mb-1" style="font-size:20px;"><?php echo htmlspecialchars($customer['name']); ?></h2>
             <p class="mb-1" style="opacity:.8;font-size:13px;"><i class="fas fa-phone me-1"></i><?php echo htmlspecialchars($customer['phone']); ?></p>
             <?php if ($customer['email']): ?>
             <p class="mb-0" style="opacity:.8;font-size:13px;"><i class="fas fa-envelope me-1"></i><?php echo htmlspecialchars($customer['email']); ?></p>
             <?php endif; ?>
         </div>
-        <div class="ms-auto text-end">
+        <div class="pb-status ms-auto text-end">
             <span class="badge bg-white text-success px-3 py-2">
                 <i class="fas fa-check-circle me-1"></i> Active Account
             </span>
@@ -151,7 +169,7 @@ $delivered = $stmt3->fetchColumn();
                             <textarea name="address" class="form-control" rows="3"><?php echo htmlspecialchars($customer['address'] ?? ''); ?></textarea>
                         </div>
                     </div>
-                    <div class="d-flex gap-2 mt-4">
+                    <div class="profile-actions d-flex gap-2 mt-4">
                         <button type="submit" class="btn btn-primary px-4">
                             <i class="fas fa-save me-2"></i> Save Changes
                         </button>
@@ -177,7 +195,7 @@ $delivered = $stmt3->fetchColumn();
                 <div class="info-row"><span class="text-muted">Total Orders</span><strong class="text-primary"><?php echo $total_orders; ?></strong></div>
                 <div class="info-row"><span class="text-muted">Delivered</span><strong class="text-success"><?php echo $delivered; ?></strong></div>
                 <div class="info-row"><span class="text-muted">Wallet</span><strong>TZS 0</strong></div>
-                <div class="mt-3 d-flex gap-2">
+                <div class="stats-actions mt-3 d-flex gap-2">
                     <a href="my_orders.php" class="btn btn-outline-primary btn-sm flex-fill">My Orders</a>
                     <a href="my_payments.php" class="btn btn-outline-secondary btn-sm flex-fill">Payments</a>
                 </div>
