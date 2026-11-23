@@ -32,3 +32,13 @@ Thumbs.db
 # Database dumps containing sensitive information
 # Remove this line if you intentionally want to version your SQL schema
 *.sql
+
+# Added by Euron Code
+.euron/cache/
+.euron/knowledge/
+.euron/security/
+.euron/settings.local.json
+
+# AB STORE AI server address (per environment)
+ai_config.php
+!ai_config.example.php

@@ -1,103 +1,132 @@
 <?php
-header('Content-Type: application/json');
+/**
+ * chatbot.php — bridge between the homepage chat widget and the AB STORE AI service
+ * (https://github.com/benardkahayi/ab-store-ai, FastAPI: POST /api/support/chat).
+ *
+ * The browser only ever talks to this file, so the AI server address stays private
+ * and there are no CORS issues. Configure the AI server URL in ai_config.php
+ * (copy ai_config.example.php) or with the AB_STORE_AI_URL environment variable.
+ *
+ *   GET  chatbot.php?health=1                       -> {"online": true|false}
+ *   POST chatbot.php {message, language, reset?}    -> {reply, human_support_required, offline?}
+ */
+session_start();
+header('Content-Type: application/json; charset=utf-8');
+header('Cache-Control: no-store');
+header('X-Content-Type-Options: nosniff');
 
-if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
-    echo json_encode(['error' => 'Method not allowed']); exit;
+// ── Configuration ──
+$config = ['url' => 'http://127.0.0.1:8000', 'timeout' => 60];
+if (is_file(__DIR__ . '/ai_config.php')) {
+    $file_config = require __DIR__ . '/ai_config.php';
+    if (is_array($file_config)) $config = array_merge($config, $file_config);
 }
+if (getenv('AB_STORE_AI_URL')) $config['url'] = getenv('AB_STORE_AI_URL');
+$ai_base = rtrim((string)$config['url'], '/');
+$timeout = max(5, (int)$config['timeout']);
 
-// ── PUT YOUR ANTHROPIC API KEY HERE ──
-$api_key = 'YOUR_ANTHROPIC_API_KEY_HERE';
+const CHAT_MAX_CHARS      = 2000;   // matches SupportRequest.question max_length
+const CHAT_RATE_LIMIT     = 12;     // messages ...
+const CHAT_RATE_WINDOW    = 60;     // ... per this many seconds, per visitor
 
-$data        = json_decode(file_get_contents('php://input'), true);
-$user_msg    = trim($data['message'] ?? '');
-$history     = $data['history']  ?? [];
-
-if (empty($user_msg)) {
-    echo json_encode(['error' => 'Empty message']); exit;
-}
-
-$system = "You are Amina, a friendly and helpful AI customer care assistant for AB FASHIONSTORE (also known as Blessings Collection), an import and shipping company based in Dar es Salaam, Tanzania.
-
-ABOUT THE COMPANY:
-- We import quality products from China and deliver to customers in Tanzania
-- Phone: +255 759 431 401
-- Email: benardkahayi@gmail.com
-- WhatsApp: +255 759 431 401
-- Location: Dar es Salaam, Tanzania
-
-OUR SERVICES:
-- Product sourcing from Taobao, 1688, Alibaba, AliExpress, and any Chinese store
-- Sea shipping: 15–30 days transit time (cheaper)
-- Air shipping: 7–14 days transit time (faster)
-- Customs clearance and doorstep delivery
-- Consolidation: we combine multiple orders into one shipment to save cost
-- Safe packaging and inspection at our China warehouse
-
-HOW IT WORKS:
-1. Customer sends us product links from any Chinese store
-2. We purchase the items on their behalf
-3. Items arrive at our China warehouse
-4. We ship to Tanzania by sea or air
-5. We handle customs clearance
-6. We deliver to the customer's doorstep
-
-PAYMENT METHODS: M-Pesa, Airtel Money, Tigo Pesa, Bank Transfer
-
-ORDER TRACKING: Customers log in to their account and use their Order ID to track shipments.
-
-REFUNDS: Available for delivered orders within 30 days. Customers submit requests through their account portal.
-
-INSTRUCTIONS:
-- Keep responses concise (2–4 sentences max)
-- Be warm, friendly, and professional
-- Respond in the same language the customer uses (English or Swahili)
-- For specific order status or prices, ask them to log in or contact us directly
-- Never make up specific prices — say 'Contact us for a custom quote'
-- Always end with a helpful follow-up question or offer";
-
-// Build conversation history for API
-$messages = [];
-foreach ($history as $h) {
-    if (in_array($h['role'] ?? '', ['user','assistant']) && !empty($h['content'])) {
-        $messages[] = ['role' => $h['role'], 'content' => $h['content']];
-    }
-}
-$messages[] = ['role' => 'user', 'content' => $user_msg];
-
-$payload = [
-    'model'      => 'claude-haiku-4-5-20251001',
-    'max_tokens' => 400,
-    'system'     => $system,
-    'messages'   => $messages,
+$FALLBACK = [
+    'en' => "Sorry, our AI assistant is unavailable right now. Please chat with the AB Store team on WhatsApp and we'll help you.",
+    'sw' => "Samahani, msaidizi wetu wa AI hapatikani kwa sasa. Tafadhali wasiliana na timu ya AB Store kupitia WhatsApp tukusaidie.",
 ];
 
-$ch = curl_init('https://api.anthropic.com/v1/messages');
-curl_setopt_array($ch, [
-    CURLOPT_RETURNTRANSFER => true,
-    CURLOPT_POST           => true,
-    CURLOPT_POSTFIELDS     => json_encode($payload),
-    CURLOPT_HTTPHEADER     => [
-        'Content-Type: application/json',
-        'x-api-key: ' . $api_key,
-        'anthropic-version: 2023-06-01',
-    ],
-    CURLOPT_TIMEOUT        => 30,
-    CURLOPT_SSL_VERIFYPEER => false,
+function respond(int $status, array $body): void {
+    http_response_code($status);
+    echo json_encode($body, JSON_UNESCAPED_UNICODE);
+    exit;
+}
+
+/** Call the AI service. Returns [http_code, decoded_json_or_null, curl_error]. */
+function ai_request(string $url, ?array $payload, int $timeout): array {
+    $ch = curl_init($url);
+    $opts = [
+        CURLOPT_RETURNTRANSFER => true,
+        CURLOPT_CONNECTTIMEOUT => 5,
+        CURLOPT_TIMEOUT        => $timeout,
+        CURLOPT_HTTPHEADER     => ['Accept: application/json'],
+    ];
+    if ($payload !== null) {
+        $opts[CURLOPT_POST]       = true;
+        $opts[CURLOPT_POSTFIELDS] = json_encode($payload, JSON_UNESCAPED_UNICODE);
+        $opts[CURLOPT_HTTPHEADER][] = 'Content-Type: application/json';
+    }
+    curl_setopt_array($ch, $opts);
+    $raw  = curl_exec($ch);
+    $code = (int)curl_getinfo($ch, CURLINFO_HTTP_CODE);
+    $err  = curl_error($ch);
+    return [$code, is_string($raw) ? json_decode($raw, true) : null, $err];
+}
+
+// ── Health check (used by the widget to show Online / Offline) ──
+if ($_SERVER['REQUEST_METHOD'] === 'GET') {
+    session_write_close();
+    if (!isset($_GET['health'])) respond(405, ['error' => 'Method not allowed']);
+    [$code] = ai_request($ai_base . '/health', null, 5);
+    respond(200, ['online' => $code === 200]);
+}
+
+if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+    respond(405, ['error' => 'Method not allowed']);
+}
+
+// ── Validate input ──
+$data     = json_decode(file_get_contents('php://input'), true);
+$data     = is_array($data) ? $data : [];
+$message  = trim((string)($data['message'] ?? ''));
+$language = strtolower(trim((string)($data['language'] ?? 'en')));
+if (!in_array($language, ['en', 'sw'], true)) $language = 'en';
+
+// "New chat" — rotate the conversation id so the AI starts with fresh memory.
+if (!empty($data['reset']) || empty($_SESSION['ai_chat_nonce'])) {
+    $_SESSION['ai_chat_nonce'] = bin2hex(random_bytes(8));
+}
+if (!empty($data['reset']) && $message === '') {
+    respond(200, ['ok' => true]);
+}
+
+if ($message === '') {
+    respond(400, ['error' => 'Empty message']);
+}
+if (mb_strlen($message) > CHAT_MAX_CHARS) {
+    respond(400, ['error' => 'Message is too long']);
+}
+
+// ── Simple per-visitor rate limit ──
+$now  = time();
+$hits = array_filter($_SESSION['ai_chat_hits'] ?? [], fn($t) => $t > $now - CHAT_RATE_WINDOW);
+if (count($hits) >= CHAT_RATE_LIMIT) {
+    respond(429, ['error' => 'Too many messages. Please wait a moment.']);
+}
+$hits[] = $now;
+$_SESSION['ai_chat_hits'] = array_values($hits);
+
+// Stable, non-guessable conversation id: the AI keeps chat memory per session_id.
+$ai_session = 'web-' . substr(hash('sha256', session_id() . '|' . $_SESSION['ai_chat_nonce']), 0, 40);
+
+// Release the session lock before the (possibly slow) AI call so other pages stay responsive.
+session_write_close();
+
+[$code, $body, $err] = ai_request($ai_base . '/api/support/chat', [
+    'question'   => $message,
+    'session_id' => $ai_session,
+    'language'   => $language,
+], $timeout);
+
+if ($code !== 200 || !is_array($body) || !isset($body['answer'])) {
+    error_log(sprintf('[chatbot] AB STORE AI request failed: http=%d err=%s', $code, $err));
+    respond(200, [
+        'reply'                  => $FALLBACK[$language],
+        'human_support_required' => true,
+        'offline'                => true,
+    ]);
+}
+
+respond(200, [
+    'reply'                  => (string)$body['answer'],
+    'human_support_required' => !empty($body['human_support_required']),
+    'language'               => $body['language'] ?? $language,
 ]);
-
-$response  = curl_exec($ch);
-$http_code = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-$curl_err  = curl_error($ch);
-curl_close($ch);
-
-if ($curl_err) {
-    echo json_encode(['error' => 'Connection error: ' . $curl_err]); exit;
-}
-if ($http_code !== 200) {
-    echo json_encode(['error' => 'API error (HTTP ' . $http_code . ')']); exit;
-}
-
-$result = json_decode($response, true);
-$reply  = $result['content'][0]['text'] ?? 'Sorry, I could not process that. Please try again or contact us directly.';
-
-echo json_encode(['reply' => $reply]);
