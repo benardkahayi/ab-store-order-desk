@@ -1054,13 +1054,15 @@ async function sendMessage(){
   try{
     const res = await fetch('chatbot.php', {
       method: 'POST', headers: {'Content-Type':'application/json'},
-      body: JSON.stringify({message: text, language: lang})
+      body: JSON.stringify({message: text, language: lang, language_chosen: langChosen})
     });
     const data = await res.json().catch(() => ({}));
     removeTyping();
     if(res.status === 429){ appendMsg('bot', T[lang].slow); }
     else if(!res.ok || !data.reply){ appendMsg('bot', T[lang].error, {handoff:true}); }
     else{
+      // Follow the language the AI detected, unless the visitor picked one.
+      if(!langChosen && (data.language === 'en' || data.language === 'sw') && data.language !== lang) setLang(data.language, false);
       appendMsg('bot', formatReply(data.reply), {handoff: !!data.human_support_required});
       if(data.offline) setStatus('offline'); else setStatus('online');
     }

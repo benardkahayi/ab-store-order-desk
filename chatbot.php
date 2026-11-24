@@ -8,7 +8,8 @@
  * (copy ai_config.example.php) or with the AB_STORE_AI_URL environment variable.
  *
  *   GET  chatbot.php?health=1                       -> {"online": true|false}
- *   POST chatbot.php {message, language, reset?}    -> {reply, human_support_required, offline?}
+ *   POST chatbot.php {message, language, language_chosen?, reset?}
+ *                                                   -> {reply, human_support_required, language, offline?}
  */
 session_start();
 header('Content-Type: application/json; charset=utf-8');
@@ -16,14 +17,16 @@ header('Cache-Control: no-store');
 header('X-Content-Type-Options: nosniff');
 
 // ── Configuration ──
-$config = ['url' => 'http://127.0.0.1:8000', 'timeout' => 60];
+$config = ['url' => 'http://127.0.0.1:8000', 'timeout' => 60, 'api_key' => ''];
 if (is_file(__DIR__ . '/ai_config.php')) {
     $file_config = require __DIR__ . '/ai_config.php';
     if (is_array($file_config)) $config = array_merge($config, $file_config);
 }
 if (getenv('AB_STORE_AI_URL')) $config['url'] = getenv('AB_STORE_AI_URL');
+if (getenv('AB_STORE_AI_KEY')) $config['api_key'] = getenv('AB_STORE_AI_KEY');
 $ai_base = rtrim((string)$config['url'], '/');
 $timeout = max(5, (int)$config['timeout']);
+$api_key = (string)$config['api_key'];
 
 const CHAT_MAX_CHARS      = 2000;   // matches SupportRequest.question max_length
 const CHAT_RATE_LIMIT     = 12;     // messages ...
@@ -41,7 +44,7 @@ function respond(int $status, array $body): void {
 }
 
 /** Call the AI service. Returns [http_code, decoded_json_or_null, curl_error]. */
-function ai_request(string $url, ?array $payload, int $timeout): array {
+function ai_request(string $url, ?array $payload, int $timeout, string $api_key = ''): array {
     $ch = curl_init($url);
     $opts = [
         CURLOPT_RETURNTRANSFER => true,
@@ -49,6 +52,8 @@ function ai_request(string $url, ?array $payload, int $timeout): array {
         CURLOPT_TIMEOUT        => $timeout,
         CURLOPT_HTTPHEADER     => ['Accept: application/json'],
     ];
+    // Identifies this website to the AI server (must match API_KEY in the AI's .env).
+    if ($api_key !== '') $opts[CURLOPT_HTTPHEADER][] = 'X-API-Key: ' . $api_key;
     if ($payload !== null) {
         $opts[CURLOPT_POST]       = true;
         $opts[CURLOPT_POSTFIELDS] = json_encode($payload, JSON_UNESCAPED_UNICODE);
@@ -79,6 +84,9 @@ $data     = is_array($data) ? $data : [];
 $message  = trim((string)($data['message'] ?? ''));
 $language = strtolower(trim((string)($data['language'] ?? 'en')));
 if (!in_array($language, ['en', 'sw'], true)) $language = 'en';
+// Only force a language when the visitor picked one with the EN/SW switch;
+// otherwise the AI detects English or Kiswahili from the message itself.
+$language_chosen = !empty($data['language_chosen']);
 
 // "New chat" — rotate the conversation id so the AI starts with fresh memory.
 if (!empty($data['reset']) || empty($_SESSION['ai_chat_nonce'])) {
@@ -110,11 +118,10 @@ $ai_session = 'web-' . substr(hash('sha256', session_id() . '|' . $_SESSION['ai_
 // Release the session lock before the (possibly slow) AI call so other pages stay responsive.
 session_write_close();
 
-[$code, $body, $err] = ai_request($ai_base . '/api/support/chat', [
-    'question'   => $message,
-    'session_id' => $ai_session,
-    'language'   => $language,
-], $timeout);
+$payload = ['question' => $message, 'session_id' => $ai_session];
+if ($language_chosen) $payload['language'] = $language;
+
+[$code, $body, $err] = ai_request($ai_base . '/api/support/chat', $payload, $timeout, $api_key);
 
 if ($code !== 200 || !is_array($body) || !isset($body['answer'])) {
     error_log(sprintf('[chatbot] AB STORE AI request failed: http=%d err=%s', $code, $err));

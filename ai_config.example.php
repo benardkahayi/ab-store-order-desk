@@ -7,4 +7,7 @@
 return [
     'url'     => 'http://127.0.0.1:8000',
     'timeout' => 60,   // seconds to wait for an answer
+    // Must match API_KEY in the AI server's .env. Leave '' if API_KEY is not set there.
+    // Keep the real key only in ai_config.php (git-ignored), never in this example file.
+    'api_key' => '',
 ];
